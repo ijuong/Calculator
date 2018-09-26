@@ -12,6 +12,17 @@ class CalculatorBrain {
     
     private var accumulator = 0.0
     private var internalProgram = [AnyObject]()
+    private var internalHistory = " "
+    
+    var history : String {
+        get {
+            return internalHistory
+        }
+    }
+    
+    func setOperandHistory(operandStr: String){
+        internalHistory.append(operandStr)
+    }
     
     func setOperand(operand: Double) {
         accumulator = operand
@@ -19,7 +30,7 @@ class CalculatorBrain {
     }
     
     private var operations: Dictionary<String, Operation> = [
-        "π" : Operation.Constant(M_PI),
+        "π" : Operation.Constant(.pi),
         "e" : Operation.Constant(M_E),
         "√" : Operation.UnaryOperation(sqrt),
         "cos" : Operation.UnaryOperation(cos),
@@ -28,7 +39,8 @@ class CalculatorBrain {
         "÷" : Operation.BinaryOperation({ $0 / $1 }),
         "+" : Operation.BinaryOperation({ $0 + $1 }),
         "−" : Operation.BinaryOperation({ $0 - $1 }),
-        "=" : Operation.Equals
+        "=" : Operation.Equals,
+        "AC" : Operation.Init
     ]
     
     private enum Operation {
@@ -36,6 +48,7 @@ class CalculatorBrain {
         case UnaryOperation((Double) -> Double)
         case BinaryOperation((Double, Double) -> Double)
         case Equals
+        case Init
     }
     
     func performOperation(symbol : String) {
@@ -45,13 +58,19 @@ class CalculatorBrain {
             switch operation {
             case .Constant(let value) :
                 accumulator = value
+                internalHistory = symbol + "=" + String(accumulator)
             case .UnaryOperation(let function) :
                 accumulator = function(accumulator)
+                internalHistory.append(symbol + "=" + String(accumulator))
             case .BinaryOperation(let function) :
                 executePendingBinaryOperation()
                 pending = PendingBinaryOperationInfo(binaryFunction: function, firstOperand: accumulator)
+                internalHistory.append(symbol)
             case .Equals :
                 executePendingBinaryOperation()
+                internalHistory.append(symbol + String(result))
+            case .Init :
+                clear()
             }
         }
     }
@@ -83,6 +102,7 @@ class CalculatorBrain {
                 for op in arrayOfOps {
                     if let operand = op as? Double {
                         setOperand(operand: operand)
+                        setOperandHistory(operandStr: String(operand))
                     } else if let operation = op as? String {
                         performOperation(symbol: operation)
                     }
@@ -95,6 +115,7 @@ class CalculatorBrain {
         accumulator = 0.0
         pending = nil
         internalProgram.removeAll()
+        internalHistory = " "
     }
     
     var result : Double {
